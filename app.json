@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "LinguistAI",
+    "slug": "linguistai",
+    "scheme": "linguistai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.viettt76.linguistai"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.viettt76.linguistai",
+      "softwareKeyboardLayoutMode": "resize",
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "updates": {
+      "url": "https://u.expo.dev/ec2ebe96-bbcc-49cd-a7ca-b4bd1a27ff81"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "ec2ebe96-bbcc-49cd-a7ca-b4bd1a27ff81"
+      }
+    },
+    "owner": "viettt76"
+  }
+}
