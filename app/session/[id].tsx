@@ -1,7 +1,8 @@
+import { useKeepAwake } from 'expo-keep-awake';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import * as Speech from 'expo-speech';
-import { Check, RotateCcw, Volume2, X } from 'lucide-react-native';
+import { Check, RotateCcw, Volume2, VolumeX, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
@@ -18,13 +19,17 @@ import { getAge, getTargetReps } from '../../lib/algorithm';
 import { useFlashcardStore } from '../../store/useFlashcardStore';
 
 export default function SessionScreen() {
+  useKeepAwake();
   const { id, mode } = useLocalSearchParams<{ id: string; mode?: string }>();
   const router = useRouter();
-  const { sessionQueue, currentSessionIndex, sessionMode, startSession, recordRep, nextCard, collections } = useFlashcardStore();
+  const {
+    sessionQueue, currentSessionIndex, sessionMode, startSession, recordRep, nextCard, collections,
+    isAutoPlayEnabled, toggleAutoPlay, undoRep
+  } = useFlashcardStore();
 
   const [isFlipped, setIsFlipped] = useState(false);
   const [studyMode, setStudyMode] = useState<'en-vi' | 'vi-en'>('en-vi');
-  const [history, setHistory] = useState<{ index: number; cardId: number; prevReps: number } | null>(null);
+  const [history, setHistory] = useState<{ index: number; cardId: number; wasSuccess: boolean } | null>(null);
   const flipAnim = useState(new Animated.Value(0))[0];
 
   useEffect(() => {
@@ -32,6 +37,14 @@ export default function SessionScreen() {
     if (id !== 'new' && id !== 'review') collectionId = Number(id);
     startSession(collectionId, (mode as any) || 'review');
   }, [id, mode]);
+
+  useEffect(() => {
+    if (isAutoPlayEnabled && currentCard && !isFlipped) {
+      if (studyMode === 'en-vi') {
+        Speech.speak(currentCard.english, { language: 'en-US' });
+      }
+    }
+  }, [currentSessionIndex, isAutoPlayEnabled]);
 
   const currentCard = sessionQueue[currentSessionIndex];
 
@@ -48,29 +61,27 @@ export default function SessionScreen() {
     if (!currentCard) return;
     Haptics.notificationAsync(isSuccess ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning);
 
-    setHistory({ index: currentSessionIndex, cardId: currentCard.id, prevReps: currentCard.daily_reps });
+    setHistory({ index: currentSessionIndex, cardId: currentCard.id, wasSuccess: isSuccess });
     await recordRep(currentCard.id, isSuccess);
 
     // Reset flip
     Animated.timing(flipAnim, { toValue: 0, duration: 0, useNativeDriver: true }).start();
     setIsFlipped(false);
 
-    if (currentSessionIndex >= sessionQueue.length - 1) {
-      Alert.alert('Session Complete! 🎉', "You've reviewed all cards.", [
-        { text: 'OK', onPress: () => router.back() }
-      ]);
-    } else {
-      nextCard();
-    }
+    nextCard();
   };
 
-  const handleUndo = () => {
+  const handleUndo = async () => {
     if (!history) return;
     // Move back and un-flip
     Animated.timing(flipAnim, { toValue: 180, duration: 0, useNativeDriver: true }).start();
     setIsFlipped(true);
-    // The store's currentSessionIndex goes back
-    useFlashcardStore.setState(s => ({ currentSessionIndex: history.index }));
+    
+    // Use the store's undoRep logic
+    await undoRep(history.cardId, history.wasSuccess);
+    
+    // Go back index
+    useFlashcardStore.setState({ currentSessionIndex: history.index });
     setHistory(null);
   };
 
@@ -146,6 +157,16 @@ export default function SessionScreen() {
             </TouchableOpacity>
           )}
           <TouchableOpacity
+            onPress={toggleAutoPlay}
+            style={[styles.headerBtn, { marginRight: 4 }]}
+          >
+            {isAutoPlayEnabled ? (
+              <Volume2 size={20} color={COLORS.primary} />
+            ) : (
+              <VolumeX size={20} color={COLORS.textMuted} />
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
             onPress={() => setStudyMode(v => v === 'en-vi' ? 'vi-en' : 'en-vi')}
             style={styles.modeBadge}
           >
@@ -172,6 +193,7 @@ export default function SessionScreen() {
             style={[styles.card, styles.cardFront, { transform: [{ rotateY: frontInterpolate }] }]}
           >
             <TouchableOpacity activeOpacity={1} onPress={handleFlip} style={styles.cardInner}>
+              <View style={StyleSheet.absoluteFill} />
               {studyMode === 'en-vi' && (
                 <TouchableOpacity
                   onPress={() => currentCard && Speech.speak(currentCard.english, { language: 'en-US' })}
@@ -180,21 +202,23 @@ export default function SessionScreen() {
                   <Volume2 size={28} color="white" />
                 </TouchableOpacity>
               )}
-              {studyMode === 'en-vi' ? (
-                <View style={styles.wordWrap}>
-                  <Text style={styles.wordText}>{currentCard?.english}</Text>
-                  {currentCard?.word_type && (
-                    <View style={styles.wordTypeBadge}>
-                      <Text style={styles.wordTypeText}>{currentCard.word_type}</Text>
-                    </View>
-                  )}
-                  {currentCard?.phonetic && (
-                    <Text style={styles.phoneticText}>{currentCard.phonetic}</Text>
-                  )}
-                </View>
-              ) : (
-                <Text style={styles.wordText}>{currentCard?.vietnamese}</Text>
-              )}
+              <View style={styles.wordWrap}>
+                {studyMode === 'en-vi' ? (
+                  <>
+                    <Text style={styles.wordText}>{currentCard?.english}</Text>
+                    {currentCard?.word_type && (
+                      <View style={styles.wordTypeBadge}>
+                        <Text style={styles.wordTypeText}>{currentCard.word_type}</Text>
+                      </View>
+                    )}
+                    {currentCard?.phonetic && (
+                      <Text style={styles.phoneticText}>{currentCard.phonetic}</Text>
+                    )}
+                  </>
+                ) : (
+                  <Text style={styles.wordText}>{currentCard?.vietnamese}</Text>
+                )}
+              </View>
               <Text style={styles.tapFlip}>TAP TO FLIP</Text>
             </TouchableOpacity>
           </Animated.View>
@@ -205,7 +229,8 @@ export default function SessionScreen() {
             style={[styles.card, styles.cardBack, { transform: [{ rotateY: backInterpolate }], opacity: isFlipped ? 1 : 0 }]}
           >
             <ScrollView contentContainerStyle={styles.cardBackContent} showsVerticalScrollIndicator>
-              <TouchableOpacity activeOpacity={1} onPress={handleFlip}>
+              <TouchableOpacity activeOpacity={1} onPress={handleFlip} style={{ flex: 1, minHeight: 320 }}>
+                <View style={StyleSheet.absoluteFill} />
                 {studyMode === 'en-vi' ? (
                   <>
                     <Text style={styles.backLabel}>TRANSLATION</Text>

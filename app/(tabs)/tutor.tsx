@@ -2,6 +2,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams } from 'expo-router';
 import * as Speech from 'expo-speech';
 import {
+  Calendar,
   Camera,
   Check,
   ChevronDown,
@@ -12,6 +13,7 @@ import {
   X
 } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import {
   ActivityIndicator,
   Alert,
@@ -42,6 +44,8 @@ export default function TutorScreen() {
   const [result, setResult] = useState<any>(null);
   const [uncheckedIndices, setUncheckedIndices] = useState<Set<number>>(new Set());
   const [cardCollections, setCardCollections] = useState<Record<number, { collectionId?: number; newCollectionName?: string }>>({});
+  const [selectedPlanDate, setSelectedPlanDate] = useState<Date>(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   
   // Collection selector
   const [isCollectionModalVisible, setIsCollectionModalVisible] = useState(false);
@@ -230,6 +234,11 @@ export default function TutorScreen() {
           grammar_note: card.grammar_note,
           example_en: card.example_en,
           example_vi: card.example_vi,
+          created_at: selectedPlanDate ? (() => {
+            const d = new Date(selectedPlanDate);
+            d.setHours(0, 0, 0, 0);
+            return d.toISOString();
+          })() : undefined,
         });
       }
 
@@ -311,14 +320,14 @@ export default function TutorScreen() {
               onChangeText={setInput}
             />
             <View style={styles.inputActions}>
-              <View style={styles.mediaBtns}>
-                <TouchableOpacity style={styles.mediaBtn} onPress={() => handlePickImage(true)}>
-                  <Camera size={20} color={COLORS.textSecondary} />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.mediaBtn} onPress={() => handlePickImage(false)}>
-                  <ImageIcon size={20} color={COLORS.textSecondary} />
-                </TouchableOpacity>
-              </View>
+                <View style={styles.mediaBtns}>
+                  <TouchableOpacity style={styles.mediaBtn} onPress={() => handlePickImage(true)}>
+                    <Camera size={18} color={COLORS.textSecondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.mediaBtn} onPress={() => handlePickImage(false)}>
+                    <ImageIcon size={18} color={COLORS.textSecondary} />
+                  </TouchableOpacity>
+                </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 <TouchableOpacity onPress={() => { setInput(''); setResult(null); }}>
                   <X size={20} color={COLORS.textSecondary} />
@@ -436,6 +445,33 @@ export default function TutorScreen() {
                   <ChevronDown size={18} color={COLORS.textSecondary} />
                 </TouchableOpacity>
 
+                <Text style={styles.masterLabel}>PLAN START DATE</Text>
+                <TouchableOpacity 
+                  onPress={() => setShowDatePicker(true)}
+                  style={styles.masterSelector}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <Calendar size={18} color={COLORS.primary} />
+                    <Text style={styles.masterValue}>
+                      {selectedPlanDate.toDateString() === new Date().toDateString() ? 'Today' : selectedPlanDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </Text>
+                  </View>
+                  <ChevronDown size={18} color={COLORS.textSecondary} />
+                </TouchableOpacity>
+
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={selectedPlanDate}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={(event, date) => {
+                      setShowDatePicker(false);
+                      if (date) setSelectedPlanDate(date);
+                    }}
+                    minimumDate={new Date()}
+                  />
+                )}
+
                 <Button 
                   title={`Save ${result.flashcards?.length - uncheckedIndices.size} Cards`}
                   onPress={handleSaveBulk}
@@ -523,6 +559,14 @@ const styles = StyleSheet.create({
     alignItems: 'center', marginTop: 10,
   },
   mediaBtns: { flexDirection: 'row', gap: 6 },
+  tomorrowToggle: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.background,
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, gap: 6,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  tomorrowToggleActive: { backgroundColor: COLORS.success, borderColor: COLORS.success },
+  tomorrowText: { fontFamily: 'Inter_500Medium', fontSize: 11, color: COLORS.textSecondary },
+  tomorrowTextActive: { color: 'white' },
   mediaBtn: {
     width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.background,
     alignItems: 'center', justifyContent: 'center',

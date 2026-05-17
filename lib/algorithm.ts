@@ -8,13 +8,12 @@ import { Flashcard } from '../types';
 /**
  * Calculates the Age of a card in days.
  */
-export function getAge(createdAt: string): number {
+export function getAge(createdAt: string, referenceDate: Date = new Date()): number {
   const created = new Date(createdAt);
-  const today = new Date();
   
-  // Set to midnight UTC for consistent day calculation
-  const createdDay = Date.UTC(created.getUTCFullYear(), created.getUTCMonth(), created.getUTCDate());
-  const todayDay = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  // Use local timezone for consistent day calculation
+  const createdDay = Date.UTC(created.getFullYear(), created.getMonth(), created.getDate());
+  const todayDay = Date.UTC(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate());
   
   const msPerDay = 24 * 60 * 60 * 1000;
   return Math.floor((todayDay - createdDay) / msPerDay);
@@ -60,9 +59,9 @@ export function isOverdue(card: Flashcard, today: Date = new Date()): boolean {
   
   const lastStudied = card.last_studied_at ? new Date(card.last_studied_at) : null;
   const isTodayStudied = lastStudied && 
-    lastStudied.getUTCDate() === today.getUTCDate() &&
-    lastStudied.getUTCMonth() === today.getUTCMonth() &&
-    lastStudied.getUTCFullYear() === today.getUTCFullYear();
+    lastStudied.getDate() === today.getDate() &&
+    lastStudied.getMonth() === today.getMonth() &&
+    lastStudied.getFullYear() === today.getFullYear();
     
   if (isTodayStudied) return false;
 

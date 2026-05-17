@@ -615,43 +615,98 @@ export default function LibraryScreen() {
         </TouchableOpacity>
       )}
 
-      <Modal visible={addModalVisible} transparent animationType="slide" onRequestClose={() => setAddModalVisible(false)}>
-        <KeyboardAvoidingView behavior='padding' style={styles.modalOverlay}>
-          <View style={styles.modalSheet}>
-            <View style={styles.handleBar} />
-            <Text style={styles.modalTitle}>{editTarget ? 'Edit Collection' : 'New Collection'}</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="e.g. TOEIC Vocabulary"
-              placeholderTextColor={COLORS.textMuted}
-              value={collectionName}
-              onChangeText={setCollectionName}
-              autoFocus
-              maxLength={40}
-            />
-            <Text style={styles.inputLabel}>ICON</Text>
-            <View style={styles.iconGrid}>
-              {ICON_OPTIONS.map(emoji => (
+      <Modal
+        visible={addModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setAddModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => {
+              if (!saving) setAddModalVisible(false);
+            }}
+          >
+            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} />
+          </TouchableOpacity>
+
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.keyboardView}
+          >
+            <View style={styles.modalSheet}>
+              <View style={styles.handleBar} />
+              <View style={styles.modalHeaderRow}>
+                <Text style={styles.modalTitle}>{editTarget ? 'Edit Collection' : 'New Collection'}</Text>
                 <TouchableOpacity
-                  key={emoji}
-                  style={[styles.iconOption, collectionIcon === emoji && styles.iconOptionSelected]}
-                  onPress={() => setCollectionIcon(emoji)}
+                  onPress={() => setAddModalVisible(false)}
+                  style={styles.closeModalBtn}
                 >
-                  <Text style={{ fontSize: 24 }}>{emoji}</Text>
+                  <X size={20} color={COLORS.textSecondary} />
                 </TouchableOpacity>
-              ))}
+              </View>
+
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                style={styles.modalScroll}
+                keyboardShouldPersistTaps="handled"
+              >
+                <View style={styles.inputSection}>
+                  <Text style={styles.inputLabel}>NAME</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="e.g. TOEIC Vocabulary"
+                    placeholderTextColor={COLORS.textMuted}
+                    value={collectionName}
+                    onChangeText={setCollectionName}
+                    autoFocus
+                    maxLength={40}
+                  />
+                </View>
+
+                <View style={styles.iconSection}>
+                  <Text style={styles.inputLabel}>ICON</Text>
+                  <View style={styles.iconGrid}>
+                    {ICON_OPTIONS.map(emoji => (
+                      <TouchableOpacity
+                        key={emoji}
+                        style={[
+                          styles.iconOption,
+                          collectionIcon === emoji && styles.iconOptionSelected
+                        ]}
+                        onPress={() => setCollectionIcon(emoji)}
+                      >
+                        <Text style={{ fontSize: 24 }}>{emoji}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </ScrollView>
+
+              <View style={styles.modalFooter}>
+                <TouchableOpacity
+                  style={[
+                    styles.saveBtn,
+                    (!collectionName.trim() || saving) && styles.saveBtnDisabled
+                  ]}
+                  onPress={handleSaveCollection}
+                  disabled={!collectionName.trim() || saving}
+                  activeOpacity={0.8}
+                >
+                  {saving ? (
+                    <ActivityIndicator color="white" size="small" />
+                  ) : (
+                    <Text style={styles.saveBtnText}>
+                      {editTarget ? 'Save Changes' : 'Create Collection'}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
-            <TouchableOpacity
-              style={[styles.saveBtn, (!collectionName.trim() || saving) && styles.saveBtnDisabled]}
-              onPress={handleSaveCollection}
-              disabled={!collectionName.trim() || saving}
-            >
-              <Text style={styles.saveBtnText}>
-                {saving ? 'Saving...' : editTarget ? 'Save Changes' : 'Create Collection'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
+          </KeyboardAvoidingView>
+        </View>
       </Modal>
 
       <Modal visible={isMoveModalVisible} transparent animationType="slide">
@@ -794,19 +849,62 @@ const styles = StyleSheet.create({
   multiDivider: { width: 1, height: '50%', backgroundColor: '#333', alignSelf: 'center' },
 
   fab: { position: 'absolute', right: 16, bottom: 16, width: 52, height: 52, borderRadius: 26, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', ...LAYOUT.shadow, elevation: 4 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  modalSheet: { backgroundColor: 'white', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 32 },
-  handleBar: { width: 36, height: 4, backgroundColor: COLORS.border, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
-  modalTitle: { fontFamily: 'Outfit_700Bold', fontSize: 24, color: COLORS.textPrimary, marginBottom: 12 },
-  inputLabel: { fontFamily: 'Inter_500Medium', fontSize: 11, letterSpacing: 1.2, color: COLORS.textMuted, marginBottom: 8 },
-  modalSubtitle: { fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.textSecondary, marginBottom: 20 },
-  modalInput: { backgroundColor: COLORS.background, borderRadius: LAYOUT.radiusSmall, paddingHorizontal: 16, paddingVertical: 14, fontFamily: 'Inter_400Regular', fontSize: 16, color: COLORS.textPrimary, marginBottom: 24, borderWidth: 1, borderColor: COLORS.border },
-  iconGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 32 },
-  iconOption: { width: 48, height: 48, borderRadius: 12, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'transparent' },
+  modalOverlay: { flex: 1, justifyContent: 'flex-end' },
+  keyboardView: { width: '100%' },
+  modalSheet: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 20,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 12, // Reduced to be closer to edge
+    width: '100%',
+    maxHeight: '92%', // Increased slightly
+    ...LAYOUT.shadow,
+    elevation: 20,
+  },
+  handleBar: { width: 40, height: 4, backgroundColor: COLORS.border, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
+  modalHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  modalTitle: { fontFamily: 'Outfit_700Bold', fontSize: 24, color: COLORS.textPrimary },
+  modalSubtitle: { fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.textSecondary, marginTop: 4, marginBottom: 20 },
+  closeModalBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center' },
+  modalScroll: { maxHeight: 500 }, // Increased to show more icons
+  inputSection: { marginBottom: 16 },
+  iconSection: { marginBottom: 8 },
+  inputLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 11, letterSpacing: 1.2, color: COLORS.textMuted, marginBottom: 8 },
+  modalInput: {
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 16,
+    color: COLORS.textPrimary,
+    borderWidth: 1,
+    borderColor: COLORS.border
+  },
+  iconGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingBottom: 4 },
+  iconOption: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: COLORS.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent'
+  },
   iconOptionSelected: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryLight },
-  saveBtn: { backgroundColor: COLORS.primary, borderRadius: LAYOUT.radiusSmall, paddingVertical: 16, alignItems: 'center' },
-  saveBtnDisabled: { opacity: 0.45 },
-  saveBtnText: { fontFamily: 'Outfit_600SemiBold', fontSize: 17, color: 'white' },
+  modalFooter: { paddingTop: 12, borderTopWidth: 1, borderTopColor: COLORS.border },
+  saveBtn: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...LAYOUT.shadow
+  },
+  saveBtnDisabled: { backgroundColor: COLORS.border, shadowOpacity: 0 },
+  saveBtnText: { fontFamily: 'Outfit_700Bold', fontSize: 16, color: 'white' },
 
   collectionCard: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: 'white',

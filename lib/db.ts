@@ -231,9 +231,9 @@ export async function searchFlashcards(query: string): Promise<(Flashcard & { co
   return rows as (Flashcard & { collection_name: string; collection_icon: string })[];
 }
 
-export async function createFlashcard(card: Omit<Flashcard, 'id' | 'daily_reps' | 'last_studied_at' | 'total_reps' | 'created_at'>): Promise<number> {
+export async function createFlashcard(card: Omit<Flashcard, 'id' | 'daily_reps' | 'last_studied_at' | 'total_reps'>): Promise<number> {
   const db = await getDb();
-  const createdAt = new Date().toISOString();
+  const createdAt = card.created_at || new Date().toISOString();
   const result = await db.runAsync(
     `INSERT INTO flashcards (
       collection_id, english, vietnamese, phonetic, word_type, 
