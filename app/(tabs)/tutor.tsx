@@ -100,10 +100,12 @@ export default function TutorScreen() {
     }
   };
 
+  const [loadingProgress, setLoadingProgress] = useState('');
+
   const handlePickImage = async (useCamera: boolean) => {
     try {
-      const permission = useCamera 
-        ? await ImagePicker.requestCameraPermissionsAsync() 
+      const permission = useCamera
+        ? await ImagePicker.requestCameraPermissionsAsync()
         : await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (!permission.granted) {
@@ -111,24 +113,52 @@ export default function TutorScreen() {
         return;
       }
 
-      const pickerResult = useCamera 
+      const pickerResult = useCamera
         ? await ImagePicker.launchCameraAsync({ quality: 0.8, base64: true })
-        : await ImagePicker.launchImageLibraryAsync({ quality: 0.8, base64: true });
+        : await ImagePicker.launchImageLibraryAsync({
+            quality: 0.8,
+            base64: true,
+            allowsMultipleSelection: true,
+            orderedSelection: true,
+          });
 
-      if (!pickerResult.canceled && pickerResult.assets[0].base64) {
-        setLoading(true);
-        const { base64, mimeType } = pickerResult.assets[0];
-        const existingCollectionNames = collections.map(d => d.name);
-        try {
-          const data = await extractFromImage(base64, mimeType || 'image/jpeg', existingCollectionNames);
-          if (data && data.flashcards?.length > 0) {
-            handleAiResult(data);
-          } else {
-            Alert.alert("Notice", "No vocabulary found in this image.");
+      if (pickerResult.canceled || pickerResult.assets.length === 0) return;
+
+      setLoading(true);
+      const existingCollectionNames = collections.map(d => d.name);
+      const allFlashcards: any[] = [];
+      const assets = pickerResult.assets;
+
+      try {
+        for (let i = 0; i < assets.length; i++) {
+          const asset = assets[i];
+          if (!asset.base64) continue;
+
+          if (assets.length > 1) {
+            setLoadingProgress(`Scanning image ${i + 1}/${assets.length}...`);
           }
-        } catch (err: any) {
-          Alert.alert("Scan Error", err.message);
+
+          try {
+            const data = await extractFromImage(
+              asset.base64,
+              asset.mimeType || 'image/jpeg',
+              existingCollectionNames
+            );
+            if (data?.flashcards?.length > 0) {
+              allFlashcards.push(...data.flashcards);
+            }
+          } catch (err: any) {
+            console.warn(`Error on image ${i + 1}:`, err.message);
+          }
         }
+
+        if (allFlashcards.length > 0) {
+          handleAiResult({ flashcards: allFlashcards });
+        } else {
+          Alert.alert("Notice", "No vocabulary found in the selected image(s).");
+        }
+      } finally {
+        setLoadingProgress('');
       }
     } catch (error: any) {
       Alert.alert("Error", error.message);
@@ -327,6 +357,9 @@ export default function TutorScreen() {
                   <TouchableOpacity style={styles.mediaBtn} onPress={() => handlePickImage(false)}>
                     <ImageIcon size={18} color={COLORS.textSecondary} />
                   </TouchableOpacity>
+                  {!!loadingProgress && (
+                    <Text style={styles.progressText}>{loadingProgress}</Text>
+                  )}
                 </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 <TouchableOpacity onPress={() => { setInput(''); setResult(null); }}>
@@ -558,7 +591,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between',
     alignItems: 'center', marginTop: 10,
   },
-  mediaBtns: { flexDirection: 'row', gap: 6 },
+  mediaBtns: { flexDirection: 'row', gap: 6, alignItems: 'center' },
+  progressText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: COLORS.textMuted, marginLeft: 4 },
   tomorrowToggle: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.background,
     paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, gap: 6,
